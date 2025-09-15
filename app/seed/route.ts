@@ -2,7 +2,8 @@ import bcrypt from 'bcrypt';
 import postgres from 'postgres';
 import { invoices, customers, revenue, users } from '../lib/placeholder-data';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+const sql = postgres(process.env.DATABASE_URL!, { ssl: 'require' });
+//console.log(sql)
 
 async function seedUsers() {
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
@@ -13,7 +14,7 @@ async function seedUsers() {
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL
     );
-  `;
+  `
 
   const insertedUsers = await Promise.all(
     users.map(async (user) => {
@@ -28,6 +29,7 @@ async function seedUsers() {
 
   return insertedUsers;
 }
+console.log(users)
 
 async function seedInvoices() {
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
@@ -100,18 +102,19 @@ async function seedRevenue() {
 
   return insertedRevenue;
 }
-
+console.log(seedRevenue)
 export async function GET() {
   try {
-    const result = await sql.begin((sql) => [
-      seedUsers(),
-      seedCustomers(),
-      seedInvoices(),
-      seedRevenue(),
-    ]);
+    // Run the seeding functions sequentially
+    await seedUsers();
+    await seedCustomers();
+    await seedInvoices();
+    await seedRevenue();
 
     return Response.json({ message: 'Database seeded successfully' });
   } catch (error) {
-    return Response.json({ error }, { status: 500 });
+    // Log the actual error to the terminal to see what's wrong
+    console.error('Database seeding failed:', error);
+    return Response.json({ message: 'Database seeding failed.' }, { status: 500 });
   }
 }
